@@ -27,7 +27,11 @@ class Planet(db.Model, SerializerMixin):
 
     # Add relationship
 
+    missions = db.relationship('Mission', back_populates = 'planet')
+
     # Add serialization rules
+
+    serialize_rules = ('-missions.planet',)
 
 
 class Scientist(db.Model, SerializerMixin):
@@ -39,9 +43,20 @@ class Scientist(db.Model, SerializerMixin):
 
     # Add relationship
 
+    missions = db.relationship('Mission', back_populates = 'scientist', cascade = ("all, delete"))
+
     # Add serialization rules
 
+    serialize_rules = ('-missions.scientist',)
+
     # Add validation
+
+    @validates('name', 'field_of_study')
+    def validate_name_field_of_study(self, key, value):
+        if not value:
+            raise ValueError(f"{key} cannot be blank")
+        return value
+
 
 
 class Mission(db.Model, SerializerMixin):
@@ -52,9 +67,32 @@ class Mission(db.Model, SerializerMixin):
 
     # Add relationships
 
+    scientist_id = db.Column(db.Integer, db.ForeignKey('scientists.id'))
+    planet_id = db.Column(db.Integer, db.ForeignKey('planets.id'))
+
+    #missions = db.relationship('Mission', back_populates = 'scientist')
+    scientist = db.relationship('Scientist', back_populates = 'missions')
+
+    #missions = db.relationship('Mission', back_populates = 'planet')
+    planet = db.relationship('Planet', back_populates = 'missions')
+
     # Add serialization rules
 
+    serialize_rules = ('-scientist.missions', '-planet.missions',)
+
     # Add validation
+
+    @validates('name')
+    def validate_name(self, key, name):
+        if not name:
+            raise ValueError('Mission name cannot be empty.')
+        return name
+    
+    @validates('scientist_id', 'planet_id')
+    def validate_foreign_keys(self, key, value):
+        if not value:
+            raise ValueError(f'{key} cannot be empty.')
+        return value
 
 
 # add any models you may need.
